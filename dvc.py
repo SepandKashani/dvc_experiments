@@ -13,8 +13,8 @@ def computeDICoperators(
     im2gz: np.ndarray,  # f32(Nz, Ny, Nx)
     im2gy: np.ndarray,  # f32(Nz, Ny, Nx)
     im2gx: np.ndarray,  # f32(Nz, Ny, Nx)
-    M: np.ndarray,  # f64(12, 12)
-    A: np.ndarray,  # f64(12,)
+    M: np.ndarray,  # f32(12, 12)
+    A: np.ndarray,  # f32(12,)
 ):
     # Different implementation of `spambind.DIC.DICToolkit.computeDICoperators()`.
 
@@ -34,9 +34,9 @@ def _computeDICoperators(
     #
     # Returns
     # -------
-    # M: ndarray[f64]
+    # M: ndarray[f32]
     #     (3, 4, 3, 4)
-    # A: ndarray[f64]
+    # A: ndarray[f32]
     #     (3, 4)
     # (M_expr, A_expr): MA_Contract
     #     Good contraction rules to eval (M, A).
@@ -51,7 +51,7 @@ def _computeDICoperators(
     x = [None] * 3
     for i in range(3):
         N = sh[i]
-        _x = np.ones((4, N))
+        _x = np.ones((4, N), dtype=np.single)
         _x[i] = np.arange(N) - 0.5 * (N - 1)
         x[i] = _x
 
@@ -92,4 +92,5 @@ def _computeDICoperators(
     M = M_expr(~nan_mask, im2g, *x, im2g, *x)
     A = A_expr(diff, im2g, *x)
 
+    assert all(_.dtype is np.dtype(np.single) for _ in (M, A))
     return M, A, (M_expr, A_expr)

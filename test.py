@@ -38,6 +38,21 @@ def mask_at_random(x: np.ndarray, r: float, rng: npr.Generator) -> np.ndarray:
     return y
 
 
+def rel_error(a: np.ndarray, b: np.ndarray) -> float:
+    """
+    Returns
+    -------
+    r: float
+        norm2(a - b) / norm2(b)
+    """
+    assert a.shape == b.shape
+
+    r = np.sqrt(np.sum((a - b) ** 2) / np.sum(b**2))
+    return r
+
+
+allclose = lambda a, b: rel_error(a, b) <= 1e-6
+
 # generate some sample 3D data ----------------------------
 D = 3
 sh = rng.integers(300, 310, size=D)  # ZYX order
@@ -62,8 +77,8 @@ M_dvc = np.zeros((12, 12), dtype=np.double)
 A_dvc = np.zeros((12,), dtype=np.double)
 dvc.computeDICoperators(im1, im2, *im2_grad, M_dvc, A_dvc)
 
-assert np.allclose(M_spam, M_dvc)
-assert np.allclose(A_spam, A_dvc)
+assert allclose(M_spam, M_dvc)
+assert allclose(A_spam, A_dvc)
 # ---------------------------------------------------------
 
 # dvc solution 2 ------------------------------------------
@@ -73,6 +88,6 @@ M_dvc2, A_dvc2, MA_expr = dvc._computeDICoperators(im1, im2, im2_grad2)
 M_dvc2 = M_dvc2.reshape(12, 12)
 A_dvc2 = A_dvc2.reshape(12)
 
-assert np.allclose(M_spam, M_dvc2)
-assert np.allclose(A_spam, A_dvc2)
+assert allclose(M_spam, M_dvc2)
+assert allclose(A_spam, A_dvc2)
 # ---------------------------------------------------------
