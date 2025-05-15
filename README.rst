@@ -20,4 +20,5 @@ Installation
 
    # Run scripts
    conda activate dvc
+   conda install -c conda-forge cupy  # to run GPU tests
    ipython3 ./test.py
