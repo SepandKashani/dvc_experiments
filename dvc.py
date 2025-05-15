@@ -1,6 +1,8 @@
 import numpy as np
 import opt_einsum as oe
 
+from compat import NDArrayInfo
+
 MA_Contract = tuple[
     "oe.contract.ContractExpression",
     "oe.contract.ContractExpression",
@@ -41,6 +43,8 @@ def _computeDICoperators(
     # (M_expr, A_expr): MA_Contract
     #     Good contraction rules to eval (M, A).
     #     Re-use them between calls to avoid the cost of finding good contractions each time.
+    ndi = NDArrayInfo.from_obj(im1)
+    xp = ndi.module()
 
     assert im1.ndim == 3
     assert im1.shape == im2.shape
@@ -51,8 +55,8 @@ def _computeDICoperators(
     x = [None] * 3
     for i in range(3):
         N = sh[i]
-        _x = np.ones((4, N), dtype=np.single)
-        _x[i] = np.arange(N) - 0.5 * (N - 1)
+        _x = xp.ones((4, N), dtype=np.single)
+        _x[i] = xp.arange(N) - 0.5 * (N - 1)
         x[i] = _x
 
     if expr:
