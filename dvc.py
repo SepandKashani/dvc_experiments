@@ -77,8 +77,7 @@ def _computeDICoperators(
             **oe_kwargs,
         )
         A_expr = oe.contract_expression(
-            "qrs,qrs,iqrs,jq,jr,js->ij",
-            sh,
+            "qrs,iqrs,jq,jr,js->ij",
             sh,
             (3, *sh),
             (4, Nz),
@@ -88,8 +87,9 @@ def _computeDICoperators(
         )
         expr = (M_expr, A_expr)
 
-    nan_mask = ~(np.isnan(im1) | np.isnan(im2))
-    M = M_expr(nan_mask, im2g, *x, im2g, *x)
-    A = A_expr(nan_mask, np.nan_to_num(im1 - im2), im2g, *x)
+    nan_mask = np.isnan(im1) | np.isnan(im2)
+    diff = np.where(nan_mask, 0, im1 - im2)
+    M = M_expr(~nan_mask, im2g, *x, im2g, *x)
+    A = A_expr(diff, im2g, *x)
 
     return M, A, (M_expr, A_expr)
