@@ -1,7 +1,9 @@
 import importlib
 
+import cupy as cp
 import numpy as np
 import numpy.random as npr
+from cupyx.profiler import benchmark
 
 import dvc
 
@@ -72,7 +74,7 @@ A_spam = np.zeros((12,), dtype=np.double)
 spam_computeDICoperators(im1, im2, *im2_grad, M_spam, A_spam)
 # ---------------------------------------------------------
 
-# dvc solution (drop-in spam replacement) -----------------
+# dvc solution (CPU; drop-in spam replacement) ------------
 M_dvc = np.zeros((12, 12), dtype=np.double)
 A_dvc = np.zeros((12,), dtype=np.double)
 dvc.computeDICoperators(im1, im2, *im2_grad, M_dvc, A_dvc)
@@ -81,8 +83,8 @@ assert allclose(M_spam, M_dvc)
 assert allclose(A_spam, A_dvc)
 # ---------------------------------------------------------
 
-# dvc solution 2 ------------------------------------------
-# A potentially faster solution, assuming we can change API of computeDICoperators()
+# dvc solution 2 (CPU) ------------------------------------
+# A faster solution, assuming we can change API of computeDICoperators()
 im2_grad2 = np.stack(im2_grad, axis=0)  # (D, *sh)
 M_dvc2, A_dvc2, MA_expr = dvc._computeDICoperators(im1, im2, im2_grad2)
 M_dvc2 = M_dvc2.reshape(12, 12)
@@ -90,4 +92,42 @@ A_dvc2 = A_dvc2.reshape(12)
 
 assert allclose(M_spam, M_dvc2)
 assert allclose(A_spam, A_dvc2)
+# ---------------------------------------------------------
+
+
+# benchmarks (CPU) ----------------------------------------
+cpu_kwargs = dict(
+    n_repeat=10,
+    n_warmup=3,
+)
+t_spam = benchmark(
+    spam_computeDICoperators, (im1, im2, *im2_grad, M_spam, A_spam), **cpu_kwargs
+)
+t_dvc = benchmark(
+    dvc.computeDICoperators, (im1, im2, *im2_grad, M_dvc, A_dvc), **cpu_kwargs
+)
+t_dvc2 = benchmark(dvc._computeDICoperators, (im1, im2, im2_grad2), **cpu_kwargs)
+print("[CPU]", t_spam.to_str(show_gpu=False))
+print("[CPU]", t_dvc.to_str(show_gpu=False))
+print("[CPU]", t_dvc2.to_str(show_gpu=False))
+# ---------------------------------------------------------
+
+# benchmarks (GPU) ----------------------------------------
+im1 = cp.asarray(im1)
+im2 = cp.asarray(im2)
+im2_grad = map(cp.asarray, im2_grad)
+im2_grad2 = cp.asarray(im2_grad2)
+M_dvc = cp.asarray(M_dvc)
+A_dvc = cp.asarray(A_dvc)
+
+gpu_kwargs = dict(
+    n_repeat=1_000,
+    n_warmup=10,
+)
+t_dvc = benchmark(
+    dvc.computeDICoperators, (im1, im2, *im2_grad, M_dvc, A_dvc), **gpu_kwargs
+)
+t_dvc2 = benchmark(dvc._computeDICoperators, (im1, im2, im2_grad2), **gpu_kwargs)
+print("[GPU]", t_dvc.to_str(show_gpu=True))
+print("[GPU]", t_dvc2.to_str(show_gpu=True))
 # ---------------------------------------------------------
